@@ -55,13 +55,19 @@ export function mapCall(c: J): RemoteInteraction {
   };
 }
 
+/** FUB ẩn nội dung SMS qua API ("Body is hidden for privacy reasons"). */
+export const isHiddenBody = (v: unknown) => typeof v === "string" && /hidden for privacy/i.test(v);
+
 export function mapText(t: J): RemoteInteraction {
+  const hidden = isHiddenBody(t.message) || isHiddenBody(t.body);
   return {
     externalId: `text:${t.id}`,
     kind: "text",
     direction: t.isIncoming ? "in" : "out",
-    occurredAt: date(t.created) ?? new Date(0),
-    body: str(t.message),
+    occurredAt: date(t.sent) ?? date(t.created) ?? new Date(0),
+    subject: hidden ? "FUB_HIDDEN" : t.isIncoming ? undefined : str(t.userName),
+    // Không lưu chuỗi giữ chỗ — để AI không coi đó là nội dung.
+    body: hidden ? undefined : str(t.message),
   };
 }
 

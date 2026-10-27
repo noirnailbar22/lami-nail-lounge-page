@@ -79,7 +79,7 @@ export function buildFacts(c: Client, interactions: Interaction[], properties: P
       preApproved: needs.preApproved,
       tags: tagsOf(c),
     },
-    recent: sorted.slice(0, 8).map((i) => ({
+    recent: sorted.filter((i) => i.body || (i.subject && i.subject !== "FUB_HIDDEN")).slice(0, 8).map((i) => ({
       when: day(i.occurredAt),
       kind: i.kind,
       direction: i.direction,

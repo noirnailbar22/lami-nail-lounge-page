@@ -12,7 +12,8 @@ import { NeedsEditor } from "@/components/needs-editor";
 import { DraftGenerator } from "@/components/draft-generator";
 import { OptOutToggles } from "@/components/opt-out-toggles";
 import { CallNoteForm } from "@/components/call-note-form";
-import { SyncFubButton } from "@/components/sync-fub-button";
+import { SmsThread } from "@/components/sms-thread";
+import { AutoSync } from "@/components/auto-sync";
 import { UnsaveButton } from "@/components/unsave-button";
 import { SCENARIOS } from "@/lib/drafts/state";
 import type { EmailThread } from "@/lib/email/types";
@@ -24,7 +25,7 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
   const c = await db.client.findUnique({
     where: { id },
     include: {
-      interactions: { orderBy: { occurredAt: "desc" }, take: 40 },
+      interactions: { orderBy: { occurredAt: "desc" }, take: 3000 },
       tasks: { orderBy: { dueAt: "asc" } },
       saved: { include: { property: true }, orderBy: { createdAt: "desc" } },
       drafts: { orderBy: { createdAt: "desc" }, take: 15 },
@@ -32,6 +33,9 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
   });
   if (!c) notFound();
   const settings = await getSettings();
+  const texts = c.interactions.filter((i) => i.kind === "text");
+  const others = c.interactions.filter((i) => i.kind !== "text").slice(0, 40);
+  const canSync = !c.isDemo && !!c.fubId && crmMode() === "fub";
   const needs = parseNeeds(c.needs);
   const sms = checkOptOut(c, "sms", primaryPhone(c), settings);
   const mail = checkOptOut(c, "email", primaryEmail(c), settings);
@@ -53,7 +57,6 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
     <div className="space-y-5">
       <PageHeader title={c.name} desc={`${c.stage ?? "Chưa có stage"} · Phụ trách: ${c.assignedTo ?? "—"} · Nguồn: ${c.sourceLabel ?? "—"}${c.fubId ? ` · FUB ID ${c.fubId}` : ""}`}>
         <DemoTag show={c.isDemo} label="KHÁCH DEMO" />
-        {!c.isDemo && c.fubId && crmMode() === "fub" && <SyncFubButton clientId={c.id} />}
       </PageHeader>
 
       <div className="grid gap-4 lg:grid-cols-3">
@@ -75,6 +78,18 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
       </div>
 
       <Card>
+        <CardHeader>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <CardTitle>Tin nhắn SMS ({texts.length})</CardTitle>
+            {canSync && <AutoSync clientId={c.id} lastSyncedAt={c.interactionsSyncedAt?.toISOString() ?? null} />}
+          </div>
+        </CardHeader>
+        <CardContent>
+          {texts.length === 0 ? <Empty>{canSync ? "Chưa có tin nhắn nào (hoặc đang tải từ FUB)." : "Không có tin nhắn."}</Empty> : <SmsThread messages={texts} clientName={c.firstName ?? c.name} fubId={c.fubId} />}
+        </CardContent>
+      </Card>
+
+      <Card>
         <CardHeader><CardTitle>Soạn follow up</CardTitle></CardHeader>
         <CardContent>
           <DraftGenerator
@@ -88,11 +103,11 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
-          <CardHeader><CardTitle>Lịch sử tương tác</CardTitle></CardHeader>
+          <CardHeader><CardTitle>Cuộc gọi, ghi chú, email, sự kiện</CardTitle></CardHeader>
           <CardContent>
-            {c.interactions.length === 0 ? <Empty>Chưa có tương tác nào được đọc.</Empty> : (
+            {others.length === 0 ? <Empty>Chưa có tương tác nào khác.</Empty> : (
               <ul className="space-y-2 text-sm max-h-[28rem] overflow-auto">
-                {c.interactions.map((i) => (
+                {others.map((i) => (
                   <li key={i.id} className="border-l-2 pl-3">
                     <div className="text-xs text-muted-foreground">{fmtDate(i.occurredAt)} · {i.kind}{i.direction ? (i.direction === "in" ? " · khách gửi" : " · mình gửi") : ""} · {i.source}{i.isDemo ? " · DEMO" : ""}</div>
                     {i.subject && <div className="font-medium">{i.subject}</div>}

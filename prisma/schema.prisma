@@ -93,6 +93,7 @@ model Client {
   lastActivityAt DateTime?
   remoteUpdated  DateTime? // trường "updated" của FUB — dùng để không ghi đè bằng bản cũ
   syncedAt       DateTime?
+  interactionsSyncedAt DateTime? // lần cuối đọc lịch sử tương tác từ FUB
   smsOptOut      Boolean   @default(false)
   emailOptOut    Boolean   @default(false)
   optOutNote     String?

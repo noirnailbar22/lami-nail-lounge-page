@@ -2,7 +2,7 @@ import crypto from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { FubClient, FubError } from "@/lib/crm/fub-client";
 import { decideUpsert } from "@/lib/crm/sync-plan";
-import { mapPerson } from "@/lib/crm/fub-map";
+import { mapPerson, mapText } from "@/lib/crm/fub-map";
 import { verifyFubSignature } from "@/lib/crm/webhook";
 
 const json = (body: unknown, status = 200, headers: Record<string, string> = {}) => new Response(JSON.stringify(body), { status, headers });
@@ -97,5 +97,17 @@ describe("chữ ký webhook FUB", () => {
     expect(verifyFubSignature(body, sig, "other")).toBe(false);
     expect(verifyFubSignature(body + " ", sig, "key")).toBe(false);
     expect(verifyFubSignature(body, null, "key")).toBe(false);
+  });
+});
+
+describe("mapText — nội dung bị FUB ẩn", () => {
+  it("không lưu chuỗi giữ chỗ làm nội dung", () => {
+    const t = mapText({ id: 1, isIncoming: true, created: "2026-10-01T00:00:00Z", message: "* Body is hidden for privacy reasons *" });
+    expect(t.body).toBeUndefined();
+    expect(t.subject).toBe("FUB_HIDDEN");
+    expect(t.direction).toBe("in");
+  });
+  it("giữ nội dung khi FUB trả về", () => {
+    expect(mapText({ id: 2, isIncoming: false, created: "2026-10-01T00:00:00Z", message: "Hi there", userName: "Hiep" }).body).toBe("Hi there");
   });
 });

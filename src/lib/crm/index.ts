@@ -79,7 +79,7 @@ async function saveInteractions(clientId: string, source: string, items: RemoteI
     await db.interaction.upsert({
       where: { source_externalId: { source, externalId: it.externalId } },
       create: { clientId, source, ...it },
-      update: { subject: it.subject, body: it.body, occurredAt: it.occurredAt },
+      update: { subject: it.subject ?? null, body: it.body ?? null, occurredAt: it.occurredAt },
     });
   }
   return (await db.interaction.count({ where: { clientId } })) - before;
@@ -100,11 +100,13 @@ export async function syncInteractionsFromFub(clientId: string) {
     ["/appointments", "appointments", mapAppointment],
   ];
   for (const [path, key, map] of sources) {
+    // Tin nhắn: đọc toàn bộ để xem lại hội thoại; loại khác: 50 bản gần nhất.
+    const cap = path === "/textMessages" ? 2000 : 50;
     try {
       let i = 0;
       for await (const raw of fub.paginate<Record<string, unknown>>(path, key, { personId: c.fubId, sort: "-created" })) {
         all.push(map(raw));
-        if (++i >= 50) break;
+        if (++i >= cap) break;
       }
     } catch (e) {
       errors.push(`${path}: ${(e as FubError).message}`);
@@ -123,6 +125,7 @@ export async function syncInteractionsFromFub(clientId: string) {
   } catch (e) {
     errors.push(`/tasks: ${(e as Error).message}`);
   }
+  await db.client.update({ where: { id: clientId }, data: { interactionsSyncedAt: new Date() } });
   return { created, total: all.length, errors };
 }
 
