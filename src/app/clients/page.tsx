@@ -4,7 +4,7 @@ import { crmMode } from "@/lib/crm";
 import { parseNeeds, needsSummary } from "@/lib/clients/needs";
 import { overdueDays } from "@/lib/clients/followup";
 import { getSettings } from "@/lib/settings";
-import { DemoTag, PageHeader, fmtDate } from "@/components/bits";
+import { DemoTag, PageHeader, StagePill, TableCard, fmtDate } from "@/components/bits";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { SyncFubButton } from "@/components/sync-fub-button";
@@ -31,14 +31,15 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
       <PageHeader title="Khách hàng" desc={mode === "fub" ? "Bản sao tối thiểu từ Follow Up Boss (đọc). Hồ sơ gốc vẫn nằm trong FUB." : "Đang dùng khách DEMO hư cấu. Thêm FUB_API_KEY và DEMO_MODE=false để đọc từ Follow Up Boss."}>
         {mode === "fub" && <SyncFubButton />}
       </PageHeader>
-      <form className="flex flex-wrap gap-2 mb-4">
+      <form className="flex flex-wrap gap-2 mb-5">
         <Input name="q" defaultValue={q} placeholder="Tìm theo tên hoặc FUB ID" className="max-w-xs" />
-        <select name="stage" defaultValue={stage} className="rounded-md border bg-background px-3 text-sm" aria-label="Stage">
+        <select name="stage" defaultValue={stage} className="rounded-lg border bg-card px-3 text-sm" aria-label="Stage">
           <option value="">Mọi stage</option>
           {stages.map((s) => <option key={s}>{s}</option>)}
         </select>
-        <button className="rounded-md border px-3 text-sm">Lọc</button>
+        <button className="rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground">Lọc</button>
       </form>
+      <TableCard>
       <Table>
         <TableHeader>
           <TableRow><TableHead>Tên</TableHead><TableHead>Stage</TableHead><TableHead>Phụ trách</TableHead><TableHead>Nhu cầu</TableHead><TableHead>Liên lạc gần nhất</TableHead><TableHead>Follow up</TableHead></TableRow>
@@ -49,16 +50,17 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
             return (
               <TableRow key={c.id}>
                 <TableCell><Link href={`/clients/${c.id}`} className="font-medium hover:underline">{c.name}</Link> <DemoTag show={c.isDemo} /></TableCell>
-                <TableCell>{c.stage ?? "—"}</TableCell>
+                <TableCell><StagePill stage={c.stage} /></TableCell>
                 <TableCell>{c.assignedTo ?? "—"}</TableCell>
                 <TableCell className="max-w-xs truncate text-muted-foreground">{needsSummary(parseNeeds(c.needs))}</TableCell>
                 <TableCell>{fmtDate(c.lastActivityAt)}</TableCell>
-                <TableCell>{od === null ? <span className="text-amber-700">chưa rõ</span> : od > 0 ? <span className="text-red-700">quá {od} ngày</span> : "—"}</TableCell>
+                <TableCell>{od === null ? <span className="text-amber-700">chưa rõ</span> : od > 0 ? <span className="rounded-full bg-rose-50 px-2 py-0.5 text-xs text-rose-700">quá {od} ngày</span> : "—"}</TableCell>
               </TableRow>
             );
           })}
         </TableBody>
       </Table>
+      </TableCard>
       {clients.length === 0 && <p className="text-sm text-muted-foreground mt-4">Không có khách khớp bộ lọc.</p>}
     </div>
   );

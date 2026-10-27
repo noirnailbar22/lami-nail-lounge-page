@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { DRAFT_STATUS, SCENARIOS } from "@/lib/drafts/state";
-import { DemoTag, DraftStatusBadge, PageHeader, fmtDateTime } from "@/components/bits";
+import { DemoTag, DraftStatusBadge, PageHeader, fmtDateTime, TableCard } from "@/components/bits";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 export const dynamic = "force-dynamic";
@@ -21,6 +21,7 @@ export default async function DraftsPage({ searchParams }: { searchParams: Promi
         <Link href="/drafts" className={`rounded border px-2 py-1 ${!status ? "bg-muted" : ""}`}>Tất cả</Link>
         {Object.entries(DRAFT_STATUS).map(([k, v]) => <Link key={k} href={`/drafts?status=${k}`} className={`rounded border px-2 py-1 ${status === k ? "bg-muted" : ""}`}>{v}</Link>)}
       </div>
+      <TableCard>
       <Table>
         <TableHeader><TableRow><TableHead>Khách</TableHead><TableHead>Kênh</TableHead><TableHead>Tình huống</TableHead><TableHead>Trạng thái</TableHead><TableHead>Nguồn soạn</TableHead><TableHead>Cập nhật</TableHead></TableRow></TableHeader>
         <TableBody>
@@ -36,6 +37,7 @@ export default async function DraftsPage({ searchParams }: { searchParams: Promi
           ))}
         </TableBody>
       </Table>
+      </TableCard>
       {drafts.length === 0 && <p className="text-sm text-muted-foreground mt-3">Chưa có bản nháp.</p>}
     </div>
   );

@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { PageHeader, fmtDateTime } from "@/components/bits";
+import { PageHeader, fmtDateTime, TableCard } from "@/components/bits";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 export const dynamic = "force-dynamic";
@@ -9,6 +9,7 @@ export default async function LogPage() {
   return (
     <div>
       <PageHeader title="Nhật ký hành động" desc="Mọi thao tác duyệt, gửi, ghi CRM, đồng bộ và thay đổi cấu hình. Secret được ẩn." />
+      <TableCard>
       <Table>
         <TableHeader><TableRow><TableHead>Thời gian</TableHead><TableHead>Ai</TableHead><TableHead>Hành động</TableHead><TableHead>Kết quả</TableHead><TableHead>Đối tượng</TableHead><TableHead>Chi tiết</TableHead></TableRow></TableHeader>
         <TableBody>
@@ -24,6 +25,7 @@ export default async function LogPage() {
           ))}
         </TableBody>
       </Table>
+      </TableCard>
     </div>
   );
 }
