@@ -115,11 +115,14 @@ docs/fub-api.md          Bảng tóm tắt Follow Up Boss API đã xác minh
 6. **MLS:** xác nhận với Unlock MLS/ABOR loại license được phép dùng cho công cụ nội bộ, và thông tin RESO Web API (trực tiếp hoặc qua vendor được cấp phép).
 7. **Phương pháp comps:** nhập vào trang "Quy tắc run comps" hoặc thêm ví dụ thật. Hiện chưa có hệ số nào được cấu hình.
 
-## Triển khai Railway (chỉ khi bạn yêu cầu)
+## Triển khai Railway
+
+Đã deploy: project `realtor-assistant` (workspace noirnailbar22), service `web` + `Postgres`, địa chỉ https://web-production-4ab1.up.railway.app. Cập nhật: `railway up --service web` (hoặc nối repo GitHub `noirnailbar22/realtor-assistant` trong Railway để tự deploy khi push).
+
 
 1. Tạo project trên Railway, thêm **PostgreSQL**, thêm service từ repo này.
 2. Variables của service: `DATABASE_URL=${{Postgres.DATABASE_URL}}`, `APP_PASSWORD`, `SESSION_SECRET` (≥ 32 ký tự: `openssl rand -base64 48`), `ENCRYPTION_KEY`, `DEMO_MODE`, cùng các key ở trên. `GOOGLE_REDIRECT_URI=https://<domain>/api/email/google/callback`.
-3. `railway.json` đã cấu hình: build `npm run build`, pre-deploy `prisma migrate deploy`, start `npm run start`, healthcheck `/api/health`.
+3. `npm run start` tự chạy `prisma migrate deploy` trước khi khởi động, nên database luôn đúng schema. Lưu ý: Railway hiện bỏ qua `railway.json` (định dạng cũ) cho lệnh pre-deploy. Healthcheck `/api/health` kiểm tra cả kết nối lẫn schema.
 4. Khi chạy production mà thiếu `APP_PASSWORD` hoặc `SESSION_SECRET`, app trả 503 và không phục vụ trang nào.
 5. Seed demo trên Railway là tùy chọn: `railway run npm run db:seed`.
 
