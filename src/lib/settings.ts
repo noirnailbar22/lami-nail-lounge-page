@@ -16,9 +16,12 @@ export type AppSettings = {
 
 export const DEFAULT_SETTINGS: AppSettings = {
   automationPaused: true,
-  cadenceDays: { Lead: 2, "Hot Prospect": 2, Nurture: 14, "Active Client": 3, Pending: 7, "Past Client": 60, default: 7 },
+  cadenceDays: {
+    Lead: 2, "A - Hot 1-3 Months": 2, "Active Client": 3, "B - Warm 3-6 Months": 7, "C - Cold 6+ Months": 21,
+    "Renter - future buyer": 30, Contact: 30, "Past Clients/Closed": 60, default: 14,
+  },
   smsOptOutTags: ["Do Not Text", "DNT", "SMS Opt Out", "Opted Out", "STOP"],
-  emailOptOutTags: ["Do Not Email", "Unsubscribed", "Email Opt Out"],
+  emailOptOutTags: ["Do Not Email", "Unsubscribed", "Email Opt Out", "Bounced"],
   defaultLanguage: "en",
   excludedStages: ["Trash", "Collaborator/ agent/lender/title....", "Referral Out To Others"],
 };
