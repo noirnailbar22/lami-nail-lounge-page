@@ -1,4 +1,3 @@
-import { NextResponse } from "next/server";
 import { redirectTo } from "@/lib/redirect";
 import { SESSION_COOKIE, createSession } from "@/lib/auth";
 import { safeEqual } from "@/lib/crypto";

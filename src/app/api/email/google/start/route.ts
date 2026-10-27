@@ -4,7 +4,7 @@ import { redirectTo } from "@/lib/redirect";
 import { gmailConfigured } from "@/lib/env";
 import { googleAuthUrl } from "@/lib/email/gmail";
 
-export async function GET(req: Request) {
+export async function GET() {
   if (!gmailConfigured()) return redirectTo("/settings?gmail=error");
   const state = crypto.randomBytes(16).toString("hex");
   const res = NextResponse.redirect(googleAuthUrl(state));
