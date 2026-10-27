@@ -1,103 +1,156 @@
-import Image from "next/image";
+import Link from "next/link";
+import { db } from "@/lib/db";
+import { getSettings } from "@/lib/settings";
+import { overdueDays } from "@/lib/clients/followup";
+import { connectionStatus } from "@/lib/connections";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ConnBadge, DemoTag, DraftStatusBadge, Empty, PageHeader, fmtDate } from "@/components/bits";
+import { CallNoteForm } from "@/components/call-note-form";
+import { ProposalList } from "@/components/proposal-list";
+import { SCENARIOS } from "@/lib/drafts/state";
 
-export default function Home() {
+export const dynamic = "force-dynamic";
+
+export default async function Dashboard() {
+  const settings = await getSettings();
+  const now = new Date();
+  const clients = await db.client.findMany({ select: { id: true, name: true, stage: true, lastActivityAt: true, isDemo: true }, take: 2000 });
+  const followUps = clients
+    .map((c) => ({ ...c, overdue: overdueDays(c, settings, now) }))
+    .filter((c) => c.overdue === null || c.overdue > 0)
+    .sort((a, b) => (b.overdue ?? 999) - (a.overdue ?? 999))
+    .slice(0, 10);
+  const pendingDrafts = await db.draft.findMany({
+    where: { status: { in: ["draft", "approved", "needs_manual_send", "failed", "unknown"] } },
+    include: { client: { select: { name: true } } },
+    orderBy: { updatedAt: "desc" },
+    take: 10,
+  });
+  const tasks = await db.crmTask.findMany({
+    where: { isCompleted: false, dueAt: { lte: new Date(now.getTime() + 2 * 86_400_000) } },
+    include: { client: { select: { id: true, name: true } } },
+    orderBy: { dueAt: "asc" },
+    take: 10,
+  });
+  const saved = await db.savedProperty.findMany({ include: { client: { select: { id: true, name: true } }, property: true }, orderBy: { createdAt: "desc" }, take: 6 });
+  const reports = await db.compReport.findMany({ orderBy: { updatedAt: "desc" }, take: 5 });
+  const proposals = await db.crmProposal.findMany({ where: { status: { in: ["proposed", "failed"] } }, include: { client: { select: { name: true } } }, orderBy: { createdAt: "desc" }, take: 20 });
+  const conns = await connectionStatus();
+  const syncErrors = await db.syncRun.findMany({ where: { status: "error" }, orderBy: { startedAt: "desc" }, take: 3 });
+  const webhookErrors = await db.webhookEvent.count({ where: { error: { not: null } } });
+  const clientOptions = clients.map((c) => ({ id: c.id, name: c.name })).sort((a, b) => a.name.localeCompare(b.name));
+
   return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+    <div className="space-y-6">
+      <PageHeader title="Tổng quan" desc="Việc cần làm hôm nay. Mọi tin nhắn và thay đổi CRM đều chờ bạn duyệt.">
+        {settings.automationPaused && <span className="rounded bg-slate-800 text-white text-xs px-2 py-1">Tự động hóa: ĐANG DỪNG</span>}
+      </PageHeader>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card>
+          <CardHeader><CardTitle>Khách cần follow up</CardTitle></CardHeader>
+          <CardContent>
+            {followUps.length === 0 ? <Empty>Không có khách quá hạn.</Empty> : (
+              <ul className="divide-y text-sm">
+                {followUps.map((c) => (
+                  <li key={c.id} className="py-2 flex items-center justify-between gap-2">
+                    <span className="flex items-center gap-2"><DemoTag show={c.isDemo} /><Link className="underline-offset-2 hover:underline" href={`/clients/${c.id}`}>{c.name}</Link><span className="text-muted-foreground">{c.stage}</span></span>
+                    <span className="text-xs text-muted-foreground whitespace-nowrap">{c.overdue === null ? "chưa có mốc liên lạc" : `quá hạn ${c.overdue} ngày`}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader><CardTitle>Tin nhắn / email chờ xử lý</CardTitle></CardHeader>
+          <CardContent>
+            {pendingDrafts.length === 0 ? <Empty>Không có bản nháp đang chờ.</Empty> : (
+              <ul className="divide-y text-sm">
+                {pendingDrafts.map((d) => (
+                  <li key={d.id} className="py-2 flex items-center justify-between gap-2">
+                    <Link href={`/drafts/${d.id}`} className="hover:underline flex items-center gap-2">
+                      <DemoTag show={d.isDemo} />
+                      {d.channel.toUpperCase()} · {d.client.name} · {SCENARIOS[d.scenario as keyof typeof SCENARIOS]}
+                    </Link>
+                    <DraftStatusBadge status={d.status} />
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader><CardTitle>Việc đến hạn (≤ 2 ngày)</CardTitle></CardHeader>
+          <CardContent>
+            {tasks.length === 0 ? <Empty>Không có việc đến hạn.</Empty> : (
+              <ul className="divide-y text-sm">
+                {tasks.map((t) => (
+                  <li key={t.id} className="py-2 flex justify-between gap-2">
+                    <span><DemoTag show={t.isDemo} /> {t.name}{t.client && <> — <Link href={`/clients/${t.client.id}`} className="hover:underline">{t.client.name}</Link></>}</span>
+                    <span className={`text-xs whitespace-nowrap ${t.dueAt && t.dueAt < now ? "text-red-700 font-medium" : "text-muted-foreground"}`}>{fmtDate(t.dueAt)}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader><CardTitle>Ghi chú sau cuộc gọi / showing</CardTitle></CardHeader>
+          <CardContent>
+            <CallNoteForm clients={clientOptions} />
+          </CardContent>
+        </Card>
+      </div>
+
+      {proposals.length > 0 && (
+        <Card>
+          <CardHeader><CardTitle>Đề xuất chờ duyệt trước khi ghi vào CRM</CardTitle></CardHeader>
+          <CardContent><ProposalList proposals={proposals.map((p) => ({ id: p.id, kind: p.kind, target: p.target, status: p.status, payload: p.payload as Record<string, unknown>, rationale: p.rationale, error: p.error, clientName: p.client.name }))} /></CardContent>
+        </Card>
+      )}
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card>
+          <CardHeader><CardTitle>Nhà đã lưu gần đây</CardTitle></CardHeader>
+          <CardContent>
+            {saved.length === 0 ? <Empty>Chưa lưu nhà nào.</Empty> : (
+              <ul className="divide-y text-sm">
+                {saved.map((s) => (
+                  <li key={s.id} className="py-2"><DemoTag show={s.property.isDemo} /> {s.property.address} → <Link href={`/clients/${s.client.id}`} className="hover:underline">{s.client.name}</Link></li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader><CardTitle>Báo cáo comps gần đây</CardTitle></CardHeader>
+          <CardContent>
+            {reports.length === 0 ? <Empty>Chưa có báo cáo.</Empty> : (
+              <ul className="divide-y text-sm">
+                {reports.map((r) => (
+                  <li key={r.id} className="py-2 flex justify-between"><Link href={`/comps/${r.id}`} className="hover:underline"><DemoTag show={r.isDemo} /> {r.title}</Link><span className="text-xs text-muted-foreground">{r.ruleVersion ? `Quy tắc v${r.ruleVersion}` : "Chỉ số liệu khách quan"}</span></li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader><CardTitle>Trạng thái kết nối & lỗi cần xử lý</CardTitle></CardHeader>
+        <CardContent className="space-y-2 text-sm">
+          {conns.slice(0, 4).map((c) => (
+            <div key={c.id} className="flex flex-wrap items-center gap-2"><ConnBadge state={c.state} /> <span className="font-medium">{c.name}</span> <span className="text-muted-foreground">{c.detail}</span></div>
+          ))}
+          {syncErrors.map((e) => <div key={e.id} className="text-red-700">Lỗi đồng bộ {e.kind} lúc {e.startedAt.toLocaleString("vi-VN")}: {e.error}</div>)}
+          {webhookErrors > 0 && <div className="text-red-700">{webhookErrors} webhook FUB xử lý lỗi — xem Nhật ký.</div>}
+          <Link href="/settings" className="text-sm underline">Xem tất cả kết nối →</Link>
+        </CardContent>
+      </Card>
     </div>
   );
 }
